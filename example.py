@@ -17,38 +17,50 @@
 
 ### Imports ###
 
-from ugsimple.GPIB import UGSimpleGPIB
-
-
+import logging
+from ugGPIB.GPIB import UGPlusGPIB
+import time
+import sys
 
 ### Program Entry Point ###
 
 if __name__ == '__main__':
-	# Initialize the UGSimpleGPIB USB adapter
-	# Requires root permissions (or add the udev rule)
-	mygpib = UGSimpleGPIB()
-	#mygpib = UGSimpleGPIB(debug_mode=True)
+    # Initialize the UGSimpleGPIB USB adapter
+    # Requires root permissions (or add the udev rule)
+    logging.basicConfig(level=logging.INFO)
+#    logging.basicConfig(level=logging.DEBUG)    # Enable logs from the adapter
+    mygpib = UGPlusGPIB()
 
-	# Firmware / Device Information
-	print ( mygpib.firmware_version() )
-	print ( mygpib.manufacturer_id() )
-	print ( mygpib.series_number() )
+    # Firmware / Device Information
+    print("Manufacturer ID: {manufacturer}".format(manufacturer=mygpib.get_manufacturer_id()))
+    print("Model Number {}, Serial number: {}".format(*mygpib.get_serial_number()))
+    print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
 
-	# List Connected Devices
-	print( mygpib.query_devices() )
+#    mygpib.reset()
+    # Firmware / Device Information
+#    print("Manufacturer ID: {manufacturer}".format(manufacturer=mygpib.manufacturer_id()))
+#    print("Firmware version: {version}".format(version=mygpib.firmware_version()))
+#    print("Serial number: {serial}".format(serial=mygpib.series_number()))
 
-	# GPIB Commands
-	# WaveTek 278 - GPIB Address 0x9
-	# Set Frequency to 79 kHz
-	mygpib.write( 0x9, "F79000I" )
-	# Enable Output
-	mygpib.write( 0x9, "P1I" )
+    # List Connected Devices
+    print("Connected devices: {devices}".format(devices=mygpib.get_gpib_devices()))
 
-	# Set Talker register to Version Info
-	mygpib.write( 0x9, "XT5" )
-	# Read Version Info
-	print ( mygpib.read( 0x9 ) )
-
-	# Set display
-	mygpib.write( 0x9, "'UGSimple Test'" )
-
+    sys.exit()
+    # GPIB Commands
+    print("Beeping three times")
+    mygpib.write(22, "END ALWAYS")
+    time.sleep(0.3)
+    mygpib.write(22, "BEEP" )
+    time.sleep(0.3)
+    mygpib.write(22, "BEEP" )
+    time.sleep(0.3)
+    mygpib.write(22, "BEEP" )
+    time.sleep(0.3)
+    print("Getting device type")
+    mygpib.write(22, "ID?")
+    time.sleep(0.3)
+    reply = mygpib.read(22, delay=1)
+    print(reply)
+    # Read Version Info
+    print("Getting device firmware version")
+    print(mygpib.read(22))
