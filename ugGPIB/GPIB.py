@@ -18,11 +18,13 @@
 
 ### Imports ###
 
+from array import array
 import binascii
+from enum import IntEnum
+import errno
 import logging
 import time
-from array import array
-from enum import IntEnum
+from usb.core import USBError
 
 from .GPIB_helper import get_usb_devices, get_usb_endpoints
 
@@ -56,7 +58,7 @@ class UGPlusGPIB:
 
         self.logger.info("Enumerating GPIB USB devices")
         for device in get_usb_devices():
-            self.logger.debug(device)
+#            self.logger.debug(device)
             self.read_ep, self.write_ep = get_usb_endpoints(device)
 
             # Initialize usb read buffer
@@ -124,15 +126,22 @@ class UGPlusGPIB:
 
         # Valid command, read next byte to determine length of command
         length = self.usb_read()[0]
-        # BUG: The manufacturer_id command returns an extra byte in UGPlus Firmware 1.0
+
+        # Handle firmware quirks
+        # **********************
         if command == ugplus_commands.GET_MANUFACTURER_ID and self.__firmware_version == (1,0):
+            # BUG: The GET_MANUFACTURER_ID command returns an extra byte in UGPlus Firmware 1.0, possibly out of bounds read!
             length = length + 1
+        if command == ugplus_commands.DISCOVER_GPIB_DEVICES and self.__firmware_version == (1,0):
+            # BUG: The DISCOVER_GPIB_DEVICES command returns an extra byte in UGPlus Firmware 1.0, possibly out of bounds read!
+            length = length if length == 3 else length + 1
+#        if command == ugplus_commands.READ and self.__firmware_version == (1,0):
+            # BUG: The READ command returns two more bytes than indicated by the length field (device ID and a delimiter)
+#            length = length + 2
+        # **********************
 
         # Read the rest of the byteData, the command and packet length field are included the length (hence -2)
         byteData = self.usb_read(length - 2)
-        # Strip the next two bytes, because if we are talking with a device, the actual payload is prepended by another header containing the GPIB device ID and a delimiter (0x02)
-        if command == ugplus_commands.READ:
-            byteData = byteData[2:]
 
         self.logger.debug("Received packet:\n  Header:\n    Command: %(command)r\n    Length %(length)d\n  Payload:\n    %(payload)s", {"command": command, "length": length, "payload": [hex(i) for i in byteData]})
 
@@ -185,7 +194,7 @@ class UGPlusGPIB:
     # Write to GPIB Address
     # address - GPIB Address
     # data    - Data to write to address
-    def write(self, address, data=""):
+    def write(self, address, data=None):
         # Prepare data with appended carriage-return and linefeed (CR + LF)
         payload = bytearray([address, 0x0F]) + bytearray(data, "ascii") + bytearray(b"\r\n")
 
@@ -206,7 +215,16 @@ class UGPlusGPIB:
         time.sleep(delay)
 
         # Read data sent from GPIB device
-        byteData = self.__device_read(ugplus_commands.READ)
+        try:
+            byteData = self.__device_read(ugplus_commands.READ)
+        except USBError as e:
+            if e.errno == errno.ETIMEDOUT:
+                return None
+            else:
+                raise
+
+        # Strip the next two bytes, because the actual payload is prepended by a header containing the GPIB device ID and a delimiter (0x02)
+        byteData = byteData[2:]
 
         if byteData is None:
             return None
