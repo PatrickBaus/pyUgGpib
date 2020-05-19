@@ -38,5 +38,7 @@ if __name__ == '__main__':
 
     # List Connected Devices
     print("Connected devices: {devices}".format(devices=mygpib.get_gpib_devices()))
+    mygpib.write(9, "*IDN?")
+    print("ID: {identifier}".format(identifier=mygpib.read(9)))
 
     mygpib.reset()

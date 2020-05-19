@@ -185,6 +185,10 @@ class UGPlusGPIB:
         # Stripping for now
         devices = self.__device_query(ugplus_commands.DISCOVER_GPIB_DEVICES)[:-1]
 
+        # Handle firmware quirks
+        # **********************
+        if self.__firmware_version == (1,0):
+            devices = devices[:-1]
         return tuple(devices)
 
     def reset(self):
