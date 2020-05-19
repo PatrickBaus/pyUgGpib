@@ -144,14 +144,14 @@ class UGPlusGPIB:
             self.logger.debug("Patching bug in GET_MANUFACTURER_ID command. Increasing length of packet from %(length)s to %(new_length)s bytes", {"length": length, "new_length": length +1})
             length = length + 1
         if command == ugplus_commands.READ and self.__firmware_version == (1,0):
-            # BUG: The READ command returns 5 bytes if the GPIB buffer is empty
-            if length == 3:
+            # BUG: The READ command returns 2 more bytes if the read returns an empty string. This is possibly an error code (1st byte is either 0x01 or 0x0A) and an out of bounds read,
+            # the last of the two bytes depends on the previous command!
+            if length < 5:
                 self.logger.debug("Patching bug in READ command. Increasing length of packet from %(length)s to 5 bytes", {"length": length})
-                length = 5
+                length = max(length, 5)
         # **********************
 
         # Read the rest of the byteData, the command and packet length field are included the length (hence -2)
-        self.logger.debug("Size of reply: %(length)s", {"length": length})
         byteData = self.usb_read(length - 2)
 
         self.logger.debug("Received packet:\n  Header:\n    Command: %(command)r\n    Length %(length)d\n  Payload:\n    %(payload)s", {"command": command, "length": length, "payload": [hex(i) for i in byteData]})
@@ -195,7 +195,7 @@ class UGPlusGPIB:
         # Two devices 0x7F
         # Stripping for now
         devices = self.__device_query(ugplus_commands.DISCOVER_GPIB_DEVICES)[:-1]
-        self.get_firmware_version()
+#        self.get_firmware_version()
 
         # Handle firmware quirks
         # **********************
@@ -241,17 +241,21 @@ class UGPlusGPIB:
                 raise
 
         # Strip the next two bytes, because the actual payload is prepended by a header containing the GPIB device ID and a delimiter
-        byteData = byteData[2:]
+        addr = byteData[0]
+        success = byteData[1] != 0x0A
 
-        if byteData is None:
-            return None
+        self.logger.debug("Final USB Read buffer: %(buffer)s", {"buffer": self.usb_read_buf})
+
+        if success:
+            byteData = byteData[2:]
+
+            if byteData is None:
+                return None
 
         # Strip final linefeed
 #        byteData = byteData[:-1]
 
         # Convert to an ascii byte array
-        byteData = binascii.b2a_qp(byteData)
+            byteData = binascii.b2a_qp(byteData)
 
-        self.logger.debug("Final USB Read buffer: %(buffer)s", {"buffer": self.usb_read_buf})
-
-        return byteData
+            return byteData
