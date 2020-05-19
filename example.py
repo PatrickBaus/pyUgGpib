@@ -26,19 +26,29 @@ from ugGPIB.GPIB import UGPlusGPIB
 if __name__ == '__main__':
     # Initialize the UGSimpleGPIB USB adapter
     # Requires root permissions (or add the udev rule)
-    logging.basicConfig(level=logging.INFO)
-#    logging.basicConfig(level=logging.DEBUG)    # Enable logs from the adapter
+#    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)    # Enable logs from the adapter
     mygpib = UGPlusGPIB()
 
     # Firmware / Device Information
-    print("Manufacturer ID: {manufacturer}".format(manufacturer=mygpib.get_manufacturer_id()))
-    print("Model Number {}, Serial number: {}".format(*mygpib.get_serial_number()))
-    print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
+#    print("Manufacturer ID: {manufacturer}".format(manufacturer=mygpib.get_manufacturer_id()))
+#    print("Model Number {}, Serial number: {}".format(*mygpib.get_serial_number()))
+#    print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
 
 
     # List Connected Devices
-    print("Connected devices: {devices}".format(devices=mygpib.get_gpib_devices()))
-    mygpib.write(9, "*IDN?")
-    print("ID: {identifier}".format(identifier=mygpib.read(9)))
+    try:
+        print("Connected devices: {devices}".format(devices=mygpib.get_gpib_devices()))
+#    mygpib.write(27, "*IDN?")
+#    print("ID: {identifier}".format(identifier=mygpib.read(27)))
+#    try:
+        while True:
+            mygpib.read(27, delay=1)
+            print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
+#    mygpib.read(27, delay=2)
+#    mygpib.read(27, delay=2)
+#    except TypeError:
+#        pass
 
-    mygpib.reset()
+    finally:
+        mygpib.reset()
