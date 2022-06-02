@@ -1,22 +1,4 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-# Copyright (C) 2015 by Jacob Alexander
-#
-# This file is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This file is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this file.  If not, see <http://www.gnu.org/licenses/>.
-
-### Imports ###
 
 from array import array
 import binascii
@@ -28,48 +10,45 @@ from usb.core import USBError
 
 from .GPIB_helper import get_usb_devices, get_usb_endpoints
 
-### Constants ###
 
 # Internal commands used by the UGPlus
 class ugplus_commands(IntEnum):
     GET_FIRMWARE_VERSION = 0x00
-    GET_SERIAL = 0x0E
+    GET_SERIES = 0x0E
     RESET = 0x0F
     WRITE = 0x32
     READ = 0x33
     DISCOVER_GPIB_DEVICES = 0x34
     GET_MANUFACTURER_ID = 0xFE
 
-### Classes ###
 
 class UGPlusGPIB:
     @property
     def logger(self):
         return self.__logger
 
-    def __init__(self, device_serial=None, timeout=None):
-        self.timeout = timeout
+    def __init__(self, device_series=2654079, timeout=None):
+        self.__timeout = timeout
         self.__logger = logging.getLogger(__name__)
         # Search for the right GPIB device
         # This is a pain in the b***, because the USB iSerialNumber is always 0x00
         # So we will iterate over all possible PIC18 controllers and query them.
-        # Note: this might break other stuff, if device that match our search criterion
+        # Note: this might break other stuff, if devices that match our search criterion
         # do not like to be talked to.
 
         self.logger.info("Enumerating GPIB USB devices")
         for device in get_usb_devices():
-#            self.logger.debug(device)
             self.read_ep, self.write_ep = get_usb_endpoints(device)
 
             # Initialize usb read buffer
-            self.usb_read_buf = array('B', [])
+            self.__usb_read_buf = array('B', [])
 
             # Now query the device
-            model, serial = self.get_serial_number()
-            self.logger.info("Device found: Serial number %(serial)s", {"serial": serial})
+            model, series = self.get_series_number()
+            self.logger.info("Device found: Series number %(series)s", {"series": series})
 
-            if device_serial is None or serial==device_serial:
-                self.logger.info("Connecting to device %(serial)s", {"serial": serial})
+            if series == device_series:
+                self.logger.info("Connecting to device %(series)s", {"series": series})
                 # Get the firmware version to apply bug fixes on the fly
                 self.__firmware_version = self.get_firmware_version()
                 break
@@ -86,33 +65,40 @@ class UGPlusGPIB:
     # Returns a byte array
     def usb_read(self, datalen=1):
         # Read USB in 64 byte chunks, store bytes until empty, then read again
-        self.logger.debug("Trying to read %(datalen)s bytes from adapter. Number of bytes in buffer. %(size_of_buffer)s", {"datalen": datalen, "size_of_buffer": len(self.usb_read_buf)})
-        while len(self.usb_read_buf) < datalen:
+        self.logger.debug(
+            "Trying to read %(datalen)s bytes from adapter. Number of bytes in buffer. %(size_of_buffer)s",
+            {"datalen": datalen, "size_of_buffer": len(self.__usb_read_buf)}
+        )
+        while len(self.__usb_read_buf) < datalen:
             bytes_to_read = self.read_ep.wMaxPacketSize
             self.logger.debug("Reading %(no_bytes)s bytes from USB device", {"no_bytes": bytes_to_read})
-            self.usb_read_buf += self.read_ep.read(size_or_buffer=bytes_to_read, timeout=self.timeout)
+            self.__usb_read_buf += self.read_ep.read(size_or_buffer=bytes_to_read, timeout=self.__timeout)
 
-        self.logger.debug("USB Read buffer: %(buffer)s, size: %(size_of_buffer)s", {"buffer": self.usb_read_buf, "size_of_buffer": len(self.usb_read_buf)})
+        self.logger.debug(
+            "USB Read buffer: %(buffer)s, size: %(size_of_buffer)s",
+            {"buffer": self.__usb_read_buf, "size_of_buffer": len(self.__usb_read_buf)}
+        )
         # Retrieve the requested number of bytes, then remove the items
-        data = self.usb_read_buf[0:datalen]
-        del self.usb_read_buf[0:datalen]
+        data = self.__usb_read_buf[0:datalen]
+        del self.__usb_read_buf[0:datalen]
 
         return data
 
     # Write UGSimple command
     # address - internal command address
     # data    - List of byte width data
-    def __device_write(self, command, data=[]):
+    def __device_write(self, command, data=None):
         assert isinstance(command, ugplus_commands)
+        if data is None:
+            data = []
         # Prepare packet for writing (add GPIB address and the size of the final packet)
-#        packet = [command, 6] if command == ugplus_commands.GET_FIRMWARE_VERSION else [command, len(data) + 2]
         packet = [command, len(data) + 2]
 
         packet.extend(data)
         self.logger.debug("Package sent to adapter: %(data)s", {"data": packet})
 
         # Send packet via usb
-        self.write_ep.write(packet, self.timeout)
+        self.write_ep.write(packet, self.__timeout)
 
     def __device_read(self, command_expected):
         assert isinstance(command_expected, ugplus_commands)
@@ -124,7 +110,10 @@ class UGPlusGPIB:
             pass
 
         if command != command_expected:
-            self.logger.error("Command '%(command)s' does not match expected command '%(expected_command)r\nBytestream received", {"command": command, "expected_command": command_expected})
+            self.logger.error(
+                "Command '%(command)s' does not match expected command '%(expected_command)r\nBytestream received",
+                {"command": command, "expected_command": command_expected}
+            )
             return None
         else:
             self.logger.debug("Got reply to command %(command)s", {"command": command})
@@ -135,28 +124,47 @@ class UGPlusGPIB:
 
         # Handle firmware quirks
         # **********************
-        if command == ugplus_commands.GET_MANUFACTURER_ID and self.__firmware_version == (1,0):
-            # BUG: The GET_MANUFACTURER_ID command returns an extra byte in UGPlus Firmware 1.0, possibly out of bounds read!
-            self.logger.debug("Patching bug in GET_MANUFACTURER_ID command. Increasing length of packet from %(length)s to %(new_length)s bytes", {"length": length, "new_length": length +1})
-            length = length + 1
-        if command == ugplus_commands.DISCOVER_GPIB_DEVICES and self.__firmware_version == (1,0):
-            # BUG: The DISCOVER_GPIB_DEVICES command returns an extra byte in UGPlus Firmware 1.0, possibly out of bounds read!
-            self.logger.debug("Patching bug in GET_MANUFACTURER_ID command. Increasing length of packet from %(length)s to %(new_length)s bytes", {"length": length, "new_length": length +1})
-            length = length + 1
-        if command == ugplus_commands.READ and self.__firmware_version == (1,0):
-            # BUG: The READ command returns 2 more bytes if the read returns an empty string. This is possibly an error code (1st byte is either 0x01 or 0x0A) and an out of bounds read,
-            # the last of the two bytes depends on the previous command!
-            if length < 5:
-                self.logger.debug("Patching bug in READ command. Increasing length of packet from %(length)s to 5 bytes", {"length": length})
-                length = max(length, 5)
+        if self.__firmware_version == (1, 0):
+            if command == ugplus_commands.GET_MANUFACTURER_ID:
+                # BUG: The GET_MANUFACTURER_ID command returns an extra byte in UGPlus Firmware 1.0, possibly
+                # an out-of-bounds read!
+                self.logger.debug(
+                    "Patching bug in GET_MANUFACTURER_ID command. Increasing length of packet from %(length)s to %(new_length)s bytes",
+                    {"length": length, "new_length": length+1}
+                )
+                length += 1
+            elif command == ugplus_commands.DISCOVER_GPIB_DEVICES:
+                # BUG: The DISCOVER_GPIB_DEVICES command returns an extra byte in UGPlus Firmware 1.0, possibly an
+                # out-of-bounds read!
+                self.logger.debug(
+                    "Patching bug in DISCOVER_GPIB_DEVICES command. Increasing length of packet from %(length)s to %(new_length)s bytes",
+                    {"length": length, "new_length": length+1}
+                )
+                length += 1
+            elif command == ugplus_commands.READ:
+                # BUG: The READ command returns 2 more bytes if the read returns an empty string. This is an error code
+                # (1st byte is either 0x01 or 0x0A) and likely an out-of-bounds read.
+                # The last of the byte depends on the previous payload! It is the same as the third byte of the previous
+                # payload
+                if length < 5:
+                    # Note: if length == 3, there is no device connected. if length == 4, there is nothing to read.
+                    # Probably...
+                    self.logger.debug(
+                        "Patching bug in READ command. Increasing length of packet from %(length)s to %(new_length)s bytes",
+                        {"length": length, "new_length": 5}
+                    )
+                    length = 5
         # **********************
 
-        # Read the rest of the byteData, the command and packet length field are included the length (hence -2)
-        byteData = self.usb_read(length - 2)
+        # Read the rest of the byte_data, the command and packet length field are included the length (hence -2)
+        byte_data = self.usb_read(length - 2)
 
-        self.logger.debug("Received packet:\n  Header:\n    Command: %(command)r\n    Length %(length)d\n  Payload:\n    %(payload)s", {"command": command, "length": length, "payload": [hex(i) for i in byteData]})
+        self.logger.debug(
+            "Received packet:\n  Header:\n    Command: %(command)r\n    Length %(length)d\n  Payload:\n    %(payload)s",
+            {"command": command, "length": length, "payload": [hex(i) for i in byte_data]}
+        )
 
-        return byteData
+        return byte_data
 
     def __device_query(self, command):
         self.__device_write(command)
@@ -166,7 +174,7 @@ class UGPlusGPIB:
     # Returns manufacturer id string
     def get_manufacturer_id(self):
         byte_data = self.__device_query(ugplus_commands.GET_MANUFACTURER_ID)
-        if self.__firmware_version == (1,0):
+        if self.__firmware_version == (1, 0):
             # BUG: strip the last byte
             byte_data = byte_data[:-1]
 
@@ -177,10 +185,10 @@ class UGPlusGPIB:
     # MMFFFFFF - e.g. 011e7f7f (Model 0x01, Function 0x1e7f7f)
     # MM       - Model number
     # FFFFFF   - Function number
-    def get_serial_number(self):
-        model, *serial = self.__device_query(ugplus_commands.GET_SERIAL)
+    def get_series_number(self):
+        model, *series = self.__device_query(ugplus_commands.GET_SERIES)
 
-        return model, int.from_bytes(serial, byteorder='big')
+        return model, int.from_bytes(series, byteorder='big')
 
     # Get the firmware version
     # Returns a (major, minor) tuple
@@ -199,7 +207,7 @@ class UGPlusGPIB:
 
         # Handle firmware quirks
         # **********************
-        if self.__firmware_version == (1,0):
+        if self.__firmware_version == (1, 0):
             devices = devices[:-1]
         return tuple(devices)
 
@@ -211,8 +219,11 @@ class UGPlusGPIB:
     # address - GPIB Address
     # data    - Data to write to address
     def write(self, address, data=None):
-        # Prepare data with appended carriage-return and linefeed (CR + LF)
-        payload = bytearray([address, 0x0F]) + bytearray(data, "ascii") + bytearray(b"\r\n")
+        try:
+            payload = bytearray([address, 0x0F]) + bytearray(data, "ascii")
+        except TypeError:
+            raise
+#            payload = bytearray([address, 0x0F]) + bytearray(data) + bytearray(b"\r\n")
 
         # Send write command (no return)
         self.__device_write(ugplus_commands.WRITE, payload)
@@ -221,8 +232,9 @@ class UGPlusGPIB:
     # address - GPIB Address
     # Returns a byte array
     def read(self, address, delay=0):
-         # Prepare read request command
+        # Prepare read request command
         payload = bytearray([address, 0x0F])
+#        payload = bytearray([address, ])
 
         # Request read
         self.__device_write(ugplus_commands.READ, payload)
@@ -232,7 +244,7 @@ class UGPlusGPIB:
 
         # Read data sent from GPIB device
         try:
-            byteData = self.__device_read(ugplus_commands.READ)
+            byte_data = self.__device_read(ugplus_commands.READ)
         except USBError as e:
             if e.errno == errno.ETIMEDOUT:
                 self.logger.error("Reading from device timed out")
@@ -240,22 +252,31 @@ class UGPlusGPIB:
             else:
                 raise
 
-        # Strip the next two bytes, because the actual payload is prepended by a header containing the GPIB device ID and a delimiter
-        addr = byteData[0]
-        success = byteData[1] != 0x0A
+        if byte_data is None:
+            return None
 
-        self.logger.debug("Final USB Read buffer: %(buffer)s", {"buffer": self.usb_read_buf})
+        # Strip the next two bytes, because the actual payload is prepended by a header containing the GPIB device ID
+        # and a delimiter
+        # addr = byte_data[0]
+        success = byte_data[1] != 0x0A
 
-        if success:
-            byteData = byteData[2:]
+        self.logger.debug("Final USB Read buffer: %(buffer)s", {"buffer": self.__usb_read_buf})
 
-            if byteData is None:
-                return None
+        if not success:
+            if len(self.__usb_read_buf) > 0:
+                self.logger.debug("Clearing USB Read buffer")
+                self.__usb_read_buf = array('B', [])    # clear usb read buffer
+            raise OSError(
+                errno.EIO,
+                f"I/O error: Cannot read from GPIB device at address {address}. Is the device attached?"
+            )
+
+        byte_data = byte_data[2:]
 
         # Strip final linefeed
-#        byteData = byteData[:-1]
+        # byte_data = byte_data[:-1]
 
         # Convert to an ascii byte array
-            byteData = binascii.b2a_qp(byteData)
+        byte_data = binascii.b2a_qp(byte_data)
 
-            return byteData
+        return byte_data
