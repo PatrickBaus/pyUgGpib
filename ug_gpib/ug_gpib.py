@@ -173,8 +173,8 @@ class UGPlusGpib:
             elif command == UgPlusCommands.READ:
                 # BUG: The READ command returns 2 more bytes if the read returns an empty string. This is an error code
                 # (1st byte is either 0x01 or 0x0A) and likely an out-of-bounds read.
-                # The last of the byte depends on the previous payload! It is the same as the third byte of the previous
-                # payload
+                # The last of the bytes depends on the previous payload! It is the same as the third byte of the
+                # previous payload.
                 if length < 5:
                     # Note: if length == 3, there is no device connected. if length == 4, there is nothing to read.
                     # Probably...
