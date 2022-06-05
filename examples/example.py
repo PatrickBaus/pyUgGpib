@@ -19,7 +19,9 @@
 ### Imports ###
 
 import logging
-from ugGPIB.GPIB import UGPlusGPIB
+import time
+
+from ug_gpib import UGPlusGpib
 
 ### Program Entry Point ###
 
@@ -28,23 +30,30 @@ if __name__ == '__main__':
     # Requires root permissions (or add the udev rule)
 #    logging.basicConfig(level=logging.INFO)
     logging.basicConfig(level=logging.DEBUG)    # Enable logs from the adapter
-    mygpib = UGPlusGPIB()
+    mygpib = UGPlusGpib(timeout=1000)
+    mygpib.write(9, "*RST\n")
+    time.sleep(1) # Need to wait after reset
 
     # Firmware / Device Information
 #    print("Manufacturer ID: {manufacturer}".format(manufacturer=mygpib.get_manufacturer_id()))
-#    print("Model Number {}, Serial number: {}".format(*mygpib.get_serial_number()))
+#    print("Model Number {}, Series number: {}".format(*mygpib.get_series_number()))
 #    print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
 
 
     # List Connected Devices
     try:
-        print("Connected devices: {devices}".format(devices=mygpib.get_gpib_devices()))
-#    mygpib.write(27, "*IDN?")
-#    print("ID: {identifier}".format(identifier=mygpib.read(27)))
+#        print("Connected devices: {devices}".format(devices=mygpib.get_gpib_devices()))
+        mygpib.write(9, "*IDN?\n")
+        print("ID: {identifier}".format(identifier=mygpib.read(9)))
 #    try:
-        while True:
-            mygpib.read(27, delay=1)
-            print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
+#        while True:
+#            mygpib.write(9, "MEASURE:VOLTAGE? P6V")
+#            try:
+#                print(mygpib.read(27, delay=0))
+#            except IOError:
+#                pass
+#            time.sleep(1)
+#            print("Firmware version: {}.{}".format(*mygpib.get_firmware_version()))
 #    mygpib.read(27, delay=2)
 #    mygpib.read(27, delay=2)
 #    except TypeError:

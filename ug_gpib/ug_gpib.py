@@ -8,11 +8,11 @@ import logging
 import time
 from usb.core import USBError
 
-from .GPIB_helper import get_usb_devices, get_usb_endpoints
+from .gpib_helper import get_usb_devices, get_usb_endpoints
 
 
-# Internal commands used by the UGPlus
-class ugplus_commands(IntEnum):
+class UgPlusCommands(IntEnum):
+    """Internal commands used by the UGPlus"""
     GET_FIRMWARE_VERSION = 0x00
     GET_SERIES = 0x0E
     RESET = 0x0F
@@ -22,7 +22,7 @@ class ugplus_commands(IntEnum):
     GET_MANUFACTURER_ID = 0xFE
 
 
-class UGPlusGPIB:
+class UGPlusGpib:
     @property
     def logger(self):
         return self.__logger
@@ -37,6 +37,7 @@ class UGPlusGPIB:
         # do not like to be talked to.
 
         self.logger.info("Enumerating GPIB USB devices")
+        self.read_ep, self.write_ep = None, None
         for device in get_usb_devices():
             self.read_ep, self.write_ep = get_usb_endpoints(device)
 
@@ -44,7 +45,7 @@ class UGPlusGPIB:
             self.__usb_read_buf = array('B', [])
 
             # Now query the device
-            model, series = self.get_series_number()
+            _, series = self.get_series_number()
             self.logger.info("Device found: Series number %(series)s", {"series": series})
 
             if series == device_series:
@@ -52,9 +53,9 @@ class UGPlusGPIB:
                 # Get the firmware version to apply bug fixes on the fly
                 self.__firmware_version = self.get_firmware_version()
                 break
-            else:
-                del self.read_ep
-                del self.write_ep
+
+            del self.read_ep
+            del self.write_ep
 
         # No device found
         if self.read_ep is None:
@@ -88,7 +89,7 @@ class UGPlusGPIB:
     # address - internal command address
     # data    - List of byte width data
     def __device_write(self, command, data=None):
-        assert isinstance(command, ugplus_commands)
+        assert isinstance(command, UgPlusCommands)
         if data is None:
             data = []
         # Prepare packet for writing (add GPIB address and the size of the final packet)
@@ -101,11 +102,11 @@ class UGPlusGPIB:
         self.write_ep.write(packet, self.__timeout)
 
     def __device_read(self, command_expected):
-        assert isinstance(command_expected, ugplus_commands)
+        assert isinstance(command_expected, UgPlusCommands)
         # Read a single byte to see if a valid command has been received
         command = self.usb_read()[0]
         try:
-            command = ugplus_commands(command)
+            command = UgPlusCommands(command)
         except ValueError:
             pass
 
@@ -115,8 +116,8 @@ class UGPlusGPIB:
                 {"command": command, "expected_command": command_expected}
             )
             return None
-        else:
-            self.logger.debug("Got reply to command %(command)s", {"command": command})
+
+        self.logger.debug("Got reply to command %(command)s", {"command": command})
 
         # Valid command, read next byte to determine length of command
         length = self.usb_read()[0]
@@ -125,7 +126,7 @@ class UGPlusGPIB:
         # Handle firmware quirks
         # **********************
         if self.__firmware_version == (1, 0):
-            if command == ugplus_commands.GET_MANUFACTURER_ID:
+            if command == UgPlusCommands.GET_MANUFACTURER_ID:
                 # BUG: The GET_MANUFACTURER_ID command returns an extra byte in UGPlus Firmware 1.0, possibly
                 # an out-of-bounds read!
                 self.logger.debug(
@@ -133,7 +134,7 @@ class UGPlusGPIB:
                     {"length": length, "new_length": length+1}
                 )
                 length += 1
-            elif command == ugplus_commands.DISCOVER_GPIB_DEVICES:
+            elif command == UgPlusCommands.DISCOVER_GPIB_DEVICES:
                 # BUG: The DISCOVER_GPIB_DEVICES command returns an extra byte in UGPlus Firmware 1.0, possibly an
                 # out-of-bounds read!
                 self.logger.debug(
@@ -141,7 +142,7 @@ class UGPlusGPIB:
                     {"length": length, "new_length": length+1}
                 )
                 length += 1
-            elif command == ugplus_commands.READ:
+            elif command == UgPlusCommands.READ:
                 # BUG: The READ command returns 2 more bytes if the read returns an empty string. This is an error code
                 # (1st byte is either 0x01 or 0x0A) and likely an out-of-bounds read.
                 # The last of the byte depends on the previous payload! It is the same as the third byte of the previous
@@ -173,7 +174,7 @@ class UGPlusGPIB:
     # Get the manufacturer id
     # Returns manufacturer id string
     def get_manufacturer_id(self):
-        byte_data = self.__device_query(ugplus_commands.GET_MANUFACTURER_ID)
+        byte_data = self.__device_query(UgPlusCommands.GET_MANUFACTURER_ID)
         if self.__firmware_version == (1, 0):
             # BUG: strip the last byte
             byte_data = byte_data[:-1]
@@ -186,14 +187,14 @@ class UGPlusGPIB:
     # MM       - Model number
     # FFFFFF   - Function number
     def get_series_number(self):
-        model, *series = self.__device_query(ugplus_commands.GET_SERIES)
+        model, *series = self.__device_query(UgPlusCommands.GET_SERIES)
 
         return model, int.from_bytes(series, byteorder='big')
 
     # Get the firmware version
     # Returns a (major, minor) tuple
     def get_firmware_version(self):
-        return tuple(self.__device_query(ugplus_commands.GET_FIRMWARE_VERSION))
+        return tuple(self.__device_query(UgPlusCommands.GET_FIRMWARE_VERSION))
 
     # Query Devices connected to UGSimple
     def get_gpib_devices(self):
@@ -202,7 +203,7 @@ class UGPlusGPIB:
         # One device  0x1E
         # Two devices 0x7F
         # Stripping for now
-        devices = self.__device_query(ugplus_commands.DISCOVER_GPIB_DEVICES)[:-1]
+        devices = self.__device_query(UgPlusCommands.DISCOVER_GPIB_DEVICES)[:-1]
 #        self.get_firmware_version()
 
         # Handle firmware quirks
@@ -213,20 +214,16 @@ class UGPlusGPIB:
 
     def reset(self):
         self.logger.info("Resetting GPIB adapter")
-        self.__device_write(ugplus_commands.RESET)
+        self.__device_write(UgPlusCommands.RESET)
 
     # Write to GPIB Address
     # address - GPIB Address
     # data    - Data to write to address
     def write(self, address, data=None):
-        try:
-            payload = bytearray([address, 0x0F]) + bytearray(data, "ascii")
-        except TypeError:
-            raise
-#            payload = bytearray([address, 0x0F]) + bytearray(data) + bytearray(b"\r\n")
+        payload = bytearray([address, 0x0F]) + bytearray(data, "ascii")
 
         # Send write command (no return)
-        self.__device_write(ugplus_commands.WRITE, payload)
+        self.__device_write(UgPlusCommands.WRITE, payload)
 
     # Read from GPIB Address
     # address - GPIB Address
@@ -237,20 +234,19 @@ class UGPlusGPIB:
 #        payload = bytearray([address, ])
 
         # Request read
-        self.__device_write(ugplus_commands.READ, payload)
+        self.__device_write(UgPlusCommands.READ, payload)
 
         # Delay if necessary
         time.sleep(delay)
 
         # Read data sent from GPIB device
         try:
-            byte_data = self.__device_read(ugplus_commands.READ)
-        except USBError as e:
-            if e.errno == errno.ETIMEDOUT:
+            byte_data = self.__device_read(UgPlusCommands.READ)
+        except USBError as exc:
+            if exc.errno == errno.ETIMEDOUT:
                 self.logger.error("Reading from device timed out")
                 return None
-            else:
-                raise
+            raise
 
         if byte_data is None:
             return None

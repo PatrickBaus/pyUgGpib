@@ -11,13 +11,27 @@ def _device_matcher(device):
     # bInterfaceSubClass 0xFF
     # bInterfaceProtocol 0xFF
     for cfg in device:
-        if (find_descriptor(cfg, bInterfaceClass=0xFF) is not None
+        if (
+            find_descriptor(cfg, bInterfaceClass=0xFF) is not None
             and find_descriptor(cfg, bInterfaceSubClass=0xFF) is not None
-            and find_descriptor(cfg, bInterfaceProtocol=0xFF) is not None):
+            and find_descriptor(cfg, bInterfaceProtocol=0xFF) is not None
+        ):
             return True
+    return False
 
 
 def get_usb_devices(vendor=0x04d8, product=0x000c):
+    """
+    Search for USB devices, that match the vendor id and product id.
+    Parameters
+    ----------
+    vendor
+    product
+
+    Returns
+    -------
+
+    """
     # Search for all USB Devices
     # 0x04d8 is the Microchip USB manufacturer ID
     # 0x000c is the specific product id assigned
@@ -59,8 +73,8 @@ def get_usb_endpoints(device):
     try:
         while True:
             read_ep.read(64, timeout=1)
-    except USBError as e:
-        if e.errno == errno.ETIMEDOUT:
+    except USBError as exc:
+        if exc.errno == errno.ETIMEDOUT:
             # There is nothing to read, so we can carry on
             pass
         else:
