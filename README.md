@@ -4,9 +4,9 @@ Python3 pyUSB UGPlus GPIB Driver
 Tested using Linux, should work for Mac OSX, Windows and any OS with Python [pyUSB](https://github.com/pyusb/pyusb)
 support.
 
-The [UGPlus](http://lqelectronics.com/Products/USBUG/UGPlus/UGPlus.html) is a fairly cheap, that supports simple GPIB
-read and write operations only. It does not support advanced GPIB features like serial polling for example. It does not
-have line drivers as well.
+The [UGPlus](http://lqelectronics.com/Products/USBUG/UGPlus/UGPlus.html) is a fairly cheap controller, that supports
+simple GPIB read and write operations only. It does not support advanced GPIB features like serial polling for example,
+and it does not have line drivers to support long cables and lots of devices on the bus.
 
 The UGPlus does have several firmware bugs, I have tried to mitigate them to the best of my knowledge. See
 [below](#firmware-bugs) for details.
@@ -34,7 +34,6 @@ usb port on creation. This can be done via a rules file.
 sudo cp 98-ugsimple.rules /etc/udev/rules.d/.
 sudo udevadm control --reload-rules
 ```
-
 
 ## Usage
 
