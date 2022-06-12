@@ -26,8 +26,18 @@ class UgPlusCommands(IntEnum):
 
 class UGPlusGpib:
     """A device driver for the LQ Electronics Corp UGPlus USB to GPIB Controller"""
-    def __init__(self, device_series=2654079, timeout=None):
-        self.__timeout = timeout
+    def __init__(self, device_series: int = 2654079, timeout: float | None = None) -> None:
+        """
+        Create a UGPlus device driver object.
+        Parameters
+        ----------
+        device_series: int, optional
+            The device series number to connect to
+        timeout: float, optional
+            The timeout for running commands in seconds
+        """
+        self.__timeout = timeout * 1000 if timeout is not None else None
+        self.__firmware_version = None
         self.__logger = logging.getLogger(__name__)
         # Search for the right GPIB device
         # This is a pain in the b***, because the USB iSerialNumber is always 0x00
@@ -43,13 +53,14 @@ class UGPlusGpib:
             # Initialize usb read buffer
             self.__usb_read_buf = bytearray()
 
-            # Now query the device
+            # Now query the device, we can safely run this command, because there are no known firmware bugs so far
             _, series = self.get_series_number()
             self.__logger.info("Device found: Series number %(series)s", {"series": series})
 
             if series == device_series:
                 self.__logger.info("Connecting to device %(series)s", {"series": series})
-                # Get the firmware version to apply bug fixes on the fly
+                # Get the firmware version to apply bug fixes on the fly. This command is also safe to run, because
+                # there are no known firmware bugs.
                 self.__firmware_version = self.version()
                 break
 

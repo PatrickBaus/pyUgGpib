@@ -29,8 +29,8 @@ from ug_gpib import UGPlusGpib
 if __name__ == '__main__':
     # Initialize the UGSimpleGPIB USB adapter
     # Requires root permissions (or add the udev rule)
-    logging.basicConfig(level=logging.INFO)    # Enable logs from the adapter, set to DEBUG for more verbose output
-    gpib_controller = UGPlusGpib(timeout=1000)
+    logging.basicConfig(level=logging.INFO)  # Enable logs from the adapter, set to DEBUG for more verbose output
+    gpib_controller = UGPlusGpib(timeout=1)  # timeout in seconds
     gpib_controller.write(9, b'*RST\n')
     time.sleep(1)  # Need to wait after reset
 
