@@ -35,13 +35,14 @@ if __name__ == "__main__":
     time.sleep(1)  # Need to wait after reset
 
     # Firmware / Device Information
-    print("Model Number {}, Series number: {}".format(*gpib_controller.get_series_number()))
-    print("Firmware version: {}.{}".format(*gpib_controller.version()))
+    model, series = gpib_controller.get_series_number()
+    print(f"Model Number {model}, Series number: {series}")
+    print("Firmware version: {}.{}".format(*gpib_controller.version()))  # pylint: disable=consider-using-f-string
 
     # List connected devices
     try:
         gpib_controller.write(9, b"*IDN?\n")
-        print("ID: {identifier}".format(identifier=gpib_controller.read(9).decode()))
+        print(f"ID: {gpib_controller.read(9).decode()}")  # type:ignore
 
     finally:
         gpib_controller.reset()

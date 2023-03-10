@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # Initialize the UGSimpleGPIB USB adapter
     # Requires root permissions (or add the udev rule)
     gpib_controller = UGPlusGpib(timeout=1)
-    pad = 9
+    pad = 9  # pylint: disable=invalid-name
     # Read commands from the stdin line by line and feed it to the GPIB device
     for line in sys.stdin:
         gpib_controller.write(pad, line.encode("ascii"))
