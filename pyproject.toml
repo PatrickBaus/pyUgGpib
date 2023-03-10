@@ -69,7 +69,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["ug_gpib",]
+packages = ["ug_gpib"]
 
 [tool.setuptools.dynamic]
 version = {attr = "ug_gpib.__version__"}

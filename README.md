@@ -26,7 +26,7 @@ To install the library in a virtual environment (always use venvs with every pro
 ```bash
 virtualenv env  # virtual environment, optional
 source env/bin/activate
-pip install git+https://github.com/PatrickBaus/pyUgGpib.git
+pip install ug-gpib
 ```
 
 ### Linux
