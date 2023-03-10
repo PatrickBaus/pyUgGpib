@@ -26,21 +26,21 @@ import time
 
 from ug_gpib import UGPlusGpib
 
-if __name__ == '__main__':
-    # Initialize the UGSimpleGPIB USB adapter
+if __name__ == "__main__":
+    # Initialize the UGPlusGPIB USB adapter
     # Requires root permissions (or add the udev rule)
     logging.basicConfig(level=logging.INFO)  # Enable logs from the adapter, set to DEBUG for more verbose output
     gpib_controller = UGPlusGpib(timeout=1)  # timeout in seconds
-    gpib_controller.write(9, b'*RST\n')
+    gpib_controller.write(9, b"*RST\n")
     time.sleep(1)  # Need to wait after reset
 
     # Firmware / Device Information
     print("Model Number {}, Series number: {}".format(*gpib_controller.get_series_number()))
     print("Firmware version: {}.{}".format(*gpib_controller.version()))
 
-    # List Connected Devices
+    # List connected devices
     try:
-        gpib_controller.write(9, b'*IDN?\n')
+        gpib_controller.write(9, b"*IDN?\n")
         print("ID: {identifier}".format(identifier=gpib_controller.read(9).decode()))
 
     finally:

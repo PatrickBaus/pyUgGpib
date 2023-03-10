@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions supporting the UGPlusGpib library.
 """
@@ -36,7 +35,7 @@ def _device_matcher(device: usb.core.Device) -> bool:
     return False
 
 
-def get_usb_devices(vendor_id: int = 0x04D8, product_id: int = 0x000c) -> Generator[usb.core.Device, None, None]:
+def get_usb_devices(vendor_id: int = 0x04D8, product_id: int = 0x000C) -> Generator[usb.core.Device, None, None]:
     """
     Search for USB devices, that match the vendor id and product id. The default vendor_id is Microchip, which is used
     by at least some devices.
@@ -52,10 +51,10 @@ def get_usb_devices(vendor_id: int = 0x04D8, product_id: int = 0x000c) -> Genera
         Returns a generator of the devices found
     """
     return usb.core.find(
-           idVendor=vendor_id,
-           idProduct=product_id,
-           custom_match=_device_matcher,
-           find_all=True,
+        idVendor=vendor_id,
+        idProduct=product_id,
+        custom_match=_device_matcher,
+        find_all=True,
     )
 
 
@@ -86,14 +85,14 @@ def get_usb_endpoints(device: usb.core.Device) -> tuple[usb.core.Endpoint, usb.c
     read_ep = find_descriptor(
         interface,
         # Match the first IN endpoint
-        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
+        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN,
     )
 
     write_ep: usb.core.Endpoint
     write_ep = find_descriptor(
         interface,
         # Match the first OUT endpoint
-        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT
+        custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT,
     )
 
     # Flush the read_ep (fingers crossed, that this is not some other device, that we are not interested in)

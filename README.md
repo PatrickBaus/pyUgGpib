@@ -1,8 +1,11 @@
 # ug_gpib
-Python3 pyUSB UGPlus GPIB Driver
+A Python3 pyUSB driver for the LQ Electronics Corp UGPlus USB to GPIB Controller.
 
 Tested using Linux, should work for Mac OSX, Windows and any OS with Python [pyUSB](https://github.com/pyusb/pyusb)
 support.
+
+:warning: **The device must be IEEE 488.1 compliant. It must assert the EOI line to signal the end of a line. If this is
+not the case, the controller cannot be used. Older devices, typically only send CR, LF, or CR-LF.**
 
 The [UGPlus](http://lqelectronics.com/Products/USBUG/UGPlus/UGPlus.html) is a fairly cheap controller, that supports
 simple GPIB read and write operations only. It does not support advanced GPIB features like serial polling for example,
@@ -41,12 +44,13 @@ Initialize UGSimpleGPIB
 
 ```python
 from ug_gpib import UGPlusGpib
+
 gpib_controller = UGPlusGpib()
 ```
 
 Writing "*IDN?" a command to address 0x02. Do note the GPIB commands must be byte strings.
 ```python
-gpib_controller.write(2, b'*IDN?\n')
+gpib_controller.write(2, b"*IDN?\n")
 ```
 
 Reading from address 0x02 and decoding the byte string to a unicode string.
@@ -68,9 +72,6 @@ The most obvious ones are the following:
 * Out-of-bounds read when reading the firmware version. The controller sends one more byte than requested.
 * Out-of-bounds read when discovering GPIB devices. The controller sends one more byte than requested.
 * Out-of-bounds read when the GPIB device does not return any data. The controller sends one more byte than requested.
-
-I have also had problems when using the adapter with an HP3478A. This device consistently crashed the adapter and only
-power cycling brought it back to life. The HP3478A is not SCPI compliant, so the issue might lie there.
 
 ## Versioning
 
