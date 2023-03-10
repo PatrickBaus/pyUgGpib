@@ -19,6 +19,8 @@ I can recommend the following libraries for both
 [Prologix GPIB adapter](https://github.com/PatrickBaus/pyAsyncPrologixGpib) and
 [Linux GPIB](https://github.com/PatrickBaus/pyAsyncGpib).
 
+The library is fully type-hinted.
+
 ## Setup
 
 To install the library in a virtual environment (always use venvs with every project):
