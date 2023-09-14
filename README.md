@@ -1,3 +1,8 @@
+[![pylint](../../actions/workflows/pylint.yml/badge.svg)](../../actions/workflows/pylint.yml)
+[![PyPI](https://img.shields.io/pypi/v/ug-gpib)](https://pypi.org/project/ug-gpib/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ug-gpib)
+![PyPI - Status](https://img.shields.io/pypi/status/ug-gpib)
+[![code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 # ug_gpib
 A Python3 pyUSB driver for the LQ Electronics Corp UGPlus USB to GPIB Controller.
 
@@ -77,7 +82,7 @@ The most obvious ones are the following:
 
 ## Versioning
 
-I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/PatrickBaus/pyAsyncPrologix/tags). 
+I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](../../tags). 
 
 ## Documentation
 I use the [Numpydoc](https://numpydoc.readthedocs.io/en/latest/format.html) style for documentation.
