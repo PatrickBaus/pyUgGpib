@@ -2,6 +2,7 @@
 [![PyPI](https://img.shields.io/pypi/v/ug-gpib)](https://pypi.org/project/ug-gpib/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ug-gpib)
 ![PyPI - Status](https://img.shields.io/pypi/status/ug-gpib)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 [![code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 # ug_gpib
 A Python3 pyUSB driver for the LQ Electronics Corp UGPlus USB to GPIB Controller.
