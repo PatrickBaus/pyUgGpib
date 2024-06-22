@@ -41,7 +41,7 @@ dev = [
 ]
 
 test = [
-    "mypy", "pylint",
+    "mypy", "pylint", "setuptools",
 ]
 
 [tool.pylint.'MESSAGES CONTROL']
