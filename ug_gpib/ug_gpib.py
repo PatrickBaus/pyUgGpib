@@ -209,7 +209,8 @@ class UGPlusGpib:
         byte_data = self._usb_read(length - 2)
 
         self.__logger.debug(
-            "Received packet:\n  Header:\n    Command: %(command)r\n    Length %(length)d\n  Payload:\n    %(payload)s.",
+            "Received packet:\n  Header:\n    Command: %(command)r\n    Length %(length)d\n  Payload:"
+            "\n    %(payload)s.",
             {"command": command, "length": length, "payload": [hex(i) for i in byte_data]},
         )
 
