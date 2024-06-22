@@ -1,5 +1,5 @@
 [project]
-name = "ug_gpib"
+name = "ug-gpib"
 authors = [
   { name="Patrick Baus", email="patrick.baus@physik.tu-darmstadt.de" },
   { name="Jacob Alexander", email="haata@kiibohd.com" },
