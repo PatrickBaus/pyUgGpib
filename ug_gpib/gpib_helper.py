@@ -1,6 +1,7 @@
 """
 Helper functions supporting the UGPlusGpib library.
 """
+
 import errno
 from typing import Generator
 

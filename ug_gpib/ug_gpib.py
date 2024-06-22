@@ -1,6 +1,7 @@
 """
 A pure Python module for the LQ Electronics Corp UGPlus USB to GPIB Controller using pyUSB.
 """
+
 from __future__ import annotations
 
 import errno
