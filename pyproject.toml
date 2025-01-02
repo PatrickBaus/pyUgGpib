@@ -27,7 +27,7 @@ keywords = ["UGPlus", "GPIB", "API"]
 dynamic = ["version"]
 dependencies = [
     "typing-extensions; python_version <'3.11'",
-    "pyusb ~= 1.2.1",
+    "pyusb >= 1.2.1,< 1.4.0",
 ]
 
 [project.urls]
